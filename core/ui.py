@@ -1,4 +1,4 @@
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QRect
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QMainWindow,
@@ -8,10 +8,12 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QStatusBar,
     QWidget,
-    QHBoxLayout, QSizePolicy, QGraphicsView
+    QHBoxLayout,
+    QSizePolicy,
 )
 
 from core import generics
+from core.generics import VGEGraphicsView, VGEGraphicsScene
 
 
 class RootWindow(generics.WindowUI):
@@ -34,7 +36,22 @@ class RootWindow(generics.WindowUI):
         self.window.addToolBar(self.toolbar)
 
         # Work area
-        self.work_area = QGraphicsView(self.window)
+        self.work_area = VGEGraphicsView(self.window)
+        self.graphics_scene = VGEGraphicsScene(self.work_area)
+        self.work_area.setScene(self.graphics_scene)
+        self.work_area.setDragMode(VGEGraphicsView.RubberBandDrag)
+
+        rect = QRect(10, 10, 100, 100)
+        self.graphics_scene.setSceneRect(rect)
+
+        def on_wheel_event(event):
+            if event.angleDelta().y() > 0:
+                self.work_area.scale(1.1, 1.1)  # Збільшення масштабу
+            else:
+                self.work_area.scale(0.9, 0.9)  # Зменшення масштабу
+            event.accept()
+
+        self.work_area.wheelEvent = on_wheel_event
 
         # Properties Panel
         self.properties_panel = QFrame()
@@ -77,16 +94,16 @@ class RootWindow(generics.WindowUI):
                 background-color: lightgray;
                 border-right: 0.5px solid gray
             }
-            
+
             #work-area {
                 border: none;
             }
-            
+
             #properties_panel {
                 background-color: lightgray;
                 border-left: 0.5px solid gray
             }
-            
+
             #statusbar {
                 border-top: 0.5px solid gray;
             }
