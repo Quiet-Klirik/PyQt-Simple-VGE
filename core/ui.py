@@ -31,6 +31,12 @@ class RootWindow(generics.WindowUI):
         self.menubar__file_menu__export_action = QAction("Export", self.window)
         self.menubar__file_menu.addAction(self.menubar__file_menu__export_action)
 
+        self.menubar__view_menu = self.menubar.addMenu("View")
+
+        self.menubar__view_menu__grid_action = QAction("Grid", self.window)
+        self.menubar__view_menu.addAction(self.menubar__view_menu__grid_action)
+        self.menubar__view_menu__grid_action.setCheckable(True)
+
         # Instruments Panel
         self.toolbar = QToolBar()
         self.window.addToolBar(self.toolbar)
@@ -41,17 +47,7 @@ class RootWindow(generics.WindowUI):
         self.work_area.setScene(self.graphics_scene)
         self.work_area.setDragMode(VGEGraphicsView.RubberBandDrag)
 
-        rect = QRect(10, 10, 100, 100)
-        self.graphics_scene.setSceneRect(rect)
-
-        def on_wheel_event(event):
-            if event.angleDelta().y() > 0:
-                self.work_area.scale(1.1, 1.1)  # Збільшення масштабу
-            else:
-                self.work_area.scale(0.9, 0.9)  # Зменшення масштабу
-            event.accept()
-
-        self.work_area.wheelEvent = on_wheel_event
+        self.graphics_scene.setSceneRect(0, 0, 1000, 1000)
 
         # Properties Panel
         self.properties_panel = QFrame()
@@ -131,6 +127,10 @@ class RootWindow(generics.WindowUI):
         self.menubar__file_menu__open_action.setText(self.tr("Open"))
         self.menubar__file_menu__save_action.setText(self.tr("Save"))
         self.menubar__file_menu__export_action.setText(self.tr("Export"))
+
+        self.menubar__view_menu.setTitle(self.tr("View"))
+
+        self.menubar__view_menu__grid_action.setText(self.tr("Grid"))
 
     def setup_images(self):
         pass

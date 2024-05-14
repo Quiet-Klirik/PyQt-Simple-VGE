@@ -11,7 +11,6 @@ from core.settings import (
 def set_language(translator: QTranslator, language: str):
     localization_path = LOCALIZATION_DIR / f"{language}.qm"
     translator.load(str(localization_path))
-    print(localization_path)
     QApplication.instance().installTranslator(translator)
 
 
