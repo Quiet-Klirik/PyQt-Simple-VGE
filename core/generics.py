@@ -1,5 +1,5 @@
 from enum import Enum
-from math import log, log2
+from math import log2, log10
 
 from PySide6.QtCore import Qt, QLine, QPoint
 from PySide6.QtGui import QPen
@@ -47,16 +47,48 @@ class VGEGraphicsView(QGraphicsView):
 
     def wheelEvent(self, event):
         if event.angleDelta().y() > 0:
-            self.scale(1.1, 1.1)  # Збільшення масштабу
+            self.scale(1.1, 1.1)
         else:
-            self.scale(0.9, 0.9)  # Зменшення масштабу
+            self.scale(0.9, 0.9)
         event.accept()
 
 
 class VGEGraphicsScene(QGraphicsScene):
     class GridStepRate(Enum):
         Binary = 2
-        Decimal = 5
+        Decimal = 10
+
+        def get_steps(self, visible_range: int | float) -> tuple[int, int]:
+            """Returns (big_step, small_step)"""
+            return self._get_steps(visible_range, self)
+
+        @classmethod
+        def _get_steps(cls, visible_range, rate):
+            return(
+                cls.get_binary_steps(visible_range) if rate == cls.Binary
+                else cls.get_decimal_steps(visible_range) if rate == cls.Decimal
+
+                else cls.get_binary_steps(visible_range)
+            )
+
+        @staticmethod
+        def get_binary_steps(visible_range):
+            big_step = 2**(max(2, int(log2(visible_range) - 2.5)))
+            small_step = big_step // 4
+            return big_step, small_step
+
+        @staticmethod
+        def get_decimal_steps(visible_range):
+            log_10 = log10(visible_range)
+            log_frac_part = log_10 % 1
+            big_step = 10**(max(1, int(log_10)))
+            step_divider = (
+                20 if log_frac_part < 0.25 and big_step != 10
+                else 10 if log_frac_part < 0.65
+                else 5
+            ) if visible_range > 10 else 10
+            small_step = big_step // step_divider
+            return big_step, small_step
 
     grid_step_rate: GridStepRate = GridStepRate.Binary
     draw_grid: bool = False
@@ -69,19 +101,13 @@ class VGEGraphicsScene(QGraphicsScene):
         top_right = view.mapToScene(viewport_rect.topRight())
         bottom_left = view.mapToScene(viewport_rect.bottomLeft())
         bottom_right = view.mapToScene(viewport_rect.bottomRight())
+        scale = view.transform().m11()
         visible_range = min(
             top_right.x() - top_left.x(), bottom_left.y() - top_left.y()
         )
-        step_rate = self.grid_step_rate
-        if step_rate == self.GridStepRate.Binary:
-            big_step = 2**(max(2, int(log2(visible_range)) - 2))
-            small_step = big_step // 4
-        else:
-            big_step = 5**(max(1, int(log(visible_range, 5) - 0.5)))
-            small_step = big_step // 5
+        big_step, small_step = self.grid_step_rate.get_steps(visible_range)
 
         pen = QPen(Qt.lightGray)
-        scale = view.transform().m11()
         pen.setWidth(0.1)
         painter.setPen(pen)
 
