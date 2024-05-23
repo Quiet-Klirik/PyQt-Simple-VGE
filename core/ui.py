@@ -9,11 +9,11 @@ from PySide6.QtWidgets import (
     QStatusBar,
     QWidget,
     QHBoxLayout,
-    QSizePolicy,
+    QSizePolicy, QGraphicsScene,
 )
 
 from core import generics
-from core.generics import VGEGraphicsView, VGEGraphicsScene
+from core.generics import VGEGraphicsView
 
 
 class RootWindow(generics.WindowUI):
@@ -36,6 +36,9 @@ class RootWindow(generics.WindowUI):
         self.menubar__view_menu__grid_action = QAction("Grid", self.window)
         self.menubar__view_menu.addAction(self.menubar__view_menu__grid_action)
         self.menubar__view_menu__grid_action.setCheckable(True)
+        self.menubar__view_menu__ruler_action = QAction("Ruler", self.window)
+        self.menubar__view_menu.addAction(self.menubar__view_menu__ruler_action)
+        self.menubar__view_menu__ruler_action.setCheckable(True)
 
         # Instruments Panel
         self.toolbar = QToolBar()
@@ -43,7 +46,7 @@ class RootWindow(generics.WindowUI):
 
         # Work area
         self.work_area = VGEGraphicsView(self.window)
-        self.graphics_scene = VGEGraphicsScene(self.work_area)
+        self.graphics_scene = QGraphicsScene(self.work_area)
         self.work_area.setScene(self.graphics_scene)
         self.work_area.setDragMode(VGEGraphicsView.RubberBandDrag)
 
@@ -131,6 +134,7 @@ class RootWindow(generics.WindowUI):
         self.menubar__view_menu.setTitle(self.tr("View"))
 
         self.menubar__view_menu__grid_action.setText(self.tr("Grid"))
+        self.menubar__view_menu__ruler_action.setText(self.tr("Ruler"))
 
     def setup_images(self):
         pass

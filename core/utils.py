@@ -17,3 +17,9 @@ def set_language(translator: QTranslator, language: str):
 def load_language(translator: QTranslator):
     language = config.value("language", DEFAULT_LANGUAGE)
     set_language(translator, language)
+
+
+def frange(start: float, stop: float, step: float = 0.1):
+    while start < stop:
+        yield start
+        start += step

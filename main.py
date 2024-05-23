@@ -16,11 +16,20 @@ class RootWindow(QMainWindow):
         self.UI.menubar__view_menu__grid_action.changed.connect(
             self.toggle_grid_display
         )
+        self.UI.menubar__view_menu__ruler_action.changed.connect(
+            self.toggle_ruler_display
+        )
 
     @Slot()
     def toggle_grid_display(self):
-        self.UI.graphics_scene.draw_grid = (
+        self.UI.work_area.draw_grid = (
             self.UI.menubar__view_menu__grid_action.isChecked()
+        )
+
+    @Slot()
+    def toggle_ruler_display(self):
+        self.UI.work_area.draw_ruler = (
+            self.UI.menubar__view_menu__ruler_action.isChecked()
         )
 
 
