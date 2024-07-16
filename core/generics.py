@@ -19,9 +19,18 @@ class VGEGraphicsView(QGraphicsView):
         Binary = 2
         Decimal = 10
 
+        _last_visible_range = None
+        _last_steps: tuple[int, int] = None
+
         def get_steps(self, visible_range: int | float) -> tuple[int, int]:
             """Returns (big_step, small_step)"""
-            return self._get_steps(visible_range, self)
+            print(visible_range)
+            if visible_range == self._last_visible_range:
+                return self._last_steps
+            steps = self._get_steps(visible_range, self)
+            self._last_visible_range = visible_range
+            self._last_steps = steps
+            return steps
 
         @classmethod
         def _get_steps(cls, visible_range, rate):
@@ -76,13 +85,12 @@ class VGEGraphicsView(QGraphicsView):
         viewport_rect = self.viewport().rect()
 
         top_left = self.mapToScene(viewport_rect.topLeft())
-        top_right = self.mapToScene(viewport_rect.topRight())
-        bottom_left = self.mapToScene(viewport_rect.bottomLeft())
         bottom_right = self.mapToScene(viewport_rect.bottomRight())
         scale = self.transform().m11()
         visible_range = min(
-            top_right.x() - top_left.x(), bottom_left.y() - top_left.y()
+            bottom_right.x() - top_left.x(), bottom_right.y() - top_left.y()
         )
+
         big_step, small_step = self.grid_step_rate.get_steps(visible_range)
 
         pen = QPen(self.Colors.Grid)
@@ -96,10 +104,10 @@ class VGEGraphicsView(QGraphicsView):
             (bottom_right / big_step).toPoint() + QPoint(1, 1)
         ) * big_step
         painter.drawLines([
-            QLine(x, int(top_left.y()), x, int(bottom_left.y()) + 1)
+            QLine(x, int(top_left.y()), x, int(bottom_right.y()) + 1)
             for x in range(int(range_start.x()), int(range_end.x()), small_step)
         ]+[
-            QLine(int(top_left.x()), y, int(top_right.x()) + 1, y)
+            QLine(int(top_left.x()), y, int(bottom_right.x()) + 1, y)
             for y in range(int(range_start.y()), int(range_end.y()), small_step)
         ])
 
@@ -113,10 +121,10 @@ class VGEGraphicsView(QGraphicsView):
         )
         painter.setPen(pen)
         painter.drawLines([
-            QLine(x, int(top_left.y()), x, int(bottom_left.y()) + 1)
+            QLine(x, int(top_left.y()), x, int(bottom_right.y()) + 1)
             for x in range(int(range_start.x()), int(range_end.x()), big_step)
         ]+[
-            QLine(int(top_left.x()), y, int(top_right.x()) + 1, y)
+            QLine(int(top_left.x()), y, int(bottom_right.x()) + 1, y)
             for y in range(int(range_start.y()), int(range_end.y()), big_step)
         ])
 
