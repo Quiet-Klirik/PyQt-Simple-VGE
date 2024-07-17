@@ -24,7 +24,6 @@ class VGEGraphicsView(QGraphicsView):
 
         def get_steps(self, visible_range: int | float) -> tuple[int, int]:
             """Returns (big_step, small_step)"""
-            print(visible_range)
             if visible_range == self._last_visible_range:
                 return self._last_steps
             steps = self._get_steps(visible_range, self)
@@ -64,6 +63,7 @@ class VGEGraphicsView(QGraphicsView):
         Background: QColor = QColor(230, 230, 230)
         SceneRect: QColor = Qt.white
         Grid: QColor = QColor(230, 230, 230)
+        Cursor: QColor = QColor(0, 0, 225)
         Ruler: QColor = QColor(220, 220, 220)
 
     def __init__(self, parent=None):
@@ -79,7 +79,9 @@ class VGEGraphicsView(QGraphicsView):
         self.draw_ruler: bool = False
 
         self.setMouseTracking(True)
-        self.last_pos = None
+        self._drag_start_pos = None
+        self.cursor_pos = None
+        self.fit_cursor_into_grid: bool = True
 
     def _draw_grid(self, painter):
         viewport_rect = self.viewport().rect()
@@ -126,6 +128,19 @@ class VGEGraphicsView(QGraphicsView):
         ]+[
             QLine(int(top_left.x()), y, int(bottom_right.x()) + 1, y)
             for y in range(int(range_start.y()), int(range_end.y()), big_step)
+        ])
+
+        painter = QPainter(self.viewport())
+        pen = QPen(self.Colors.Cursor)
+        pen.setWidth(0.1)
+        painter.setPen(pen)
+
+        cursor_pos = self.cursor_pos
+        painter.drawLines([
+            QLineF(cursor_pos.x() - 5, cursor_pos.y(),
+                   cursor_pos.x() + 5, cursor_pos.y()),
+            QLineF(cursor_pos.x(), cursor_pos.y() - 5,
+                   cursor_pos.x(), cursor_pos.y() + 5)
         ])
 
     def _draw_ruler(self):
@@ -195,6 +210,17 @@ class VGEGraphicsView(QGraphicsView):
             ]
         )
 
+        cursor_pen = QPen(self.Colors.Cursor)
+        cursor_pen.setWidth(0.1)
+        painter.setPen(cursor_pen)
+        painter.drawLines([
+            QLineF(self.ruler_width / 2, self.cursor_pos.y(),
+                   self.ruler_width, self.cursor_pos.y()),
+            QLineF(self.cursor_pos.x(), self.ruler_width / 2,
+                   self.cursor_pos.x(), self.ruler_width)
+        ])
+        painter.setPen(pen)
+
         painter.setFont(QFont("Arial", self.ruler_width // 2))
         for x, scene_x in zip(
             frange(range_start.x(), range_end.x(), big_step),
@@ -229,6 +255,11 @@ class VGEGraphicsView(QGraphicsView):
             self.ruler_width + 1, self.ruler_width + 1
         )
 
+        painter.drawText(
+            QPointF(self.ruler_width * 0.2, self.ruler_width * 0.7),
+            "px"
+        )
+
     def drawBackground(self, painter, rect) -> None:
         super().drawBackground(painter, rect)
         painter.fillRect(rect, self.Colors.Background)
@@ -251,11 +282,11 @@ class VGEGraphicsView(QGraphicsView):
                 self.dragMode() == self.DragMode.RubberBandDrag
                 and event.button() == self.drag_button
         ):
-            self.last_pos = event.pos()
+            self._drag_start_pos = event.pos()
 
     def mouseMoveEvent(self, event):
         if event.buttons() & self.drag_button:
-            delta = event.pos() - self.last_pos
+            delta = event.pos() - self._drag_start_pos
             horizontal_scrollbar = self.horizontalScrollBar()
             vertical_scrollbar = self.verticalScrollBar()
             horizontal_scrollbar.setValue(
@@ -264,9 +295,12 @@ class VGEGraphicsView(QGraphicsView):
             vertical_scrollbar.setValue(
                 vertical_scrollbar.value() - delta.y()
             )
-            self.last_pos = event.pos()
+            self._drag_start_pos = event.pos()
         else:
             super().mouseMoveEvent(event)
+        if self.draw_ruler or self.draw_grid or not self.cursor_pos:
+            self.cursor_pos = event.pos()
+            self.viewport().update()
 
     def wheelEvent(self, event):
         if event.angleDelta().y() > 0:
