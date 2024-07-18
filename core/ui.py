@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 
 from core import generics
 from core.generics import VGEGraphicsView
+from core.settings import config, DefaultSettings
 
 
 class RootWindow(generics.WindowUI):
@@ -36,9 +37,15 @@ class RootWindow(generics.WindowUI):
         self.menubar__view_menu__grid_action = QAction("Grid", self.window)
         self.menubar__view_menu.addAction(self.menubar__view_menu__grid_action)
         self.menubar__view_menu__grid_action.setCheckable(True)
+        self.menubar__view_menu__grid_action.setChecked(
+            config.value("draw_grid", DefaultSettings.DRAW_GRID)
+        )
         self.menubar__view_menu__ruler_action = QAction("Ruler", self.window)
         self.menubar__view_menu.addAction(self.menubar__view_menu__ruler_action)
         self.menubar__view_menu__ruler_action.setCheckable(True)
+        self.menubar__view_menu__ruler_action.setChecked(
+            config.value("draw_ruler", DefaultSettings.DRAW_RULER)
+        )
 
         # Instruments Panel
         self.toolbar = QToolBar()
