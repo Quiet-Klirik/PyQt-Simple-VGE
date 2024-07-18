@@ -5,6 +5,7 @@ from PySide6.QtCore import Qt, QLine, QPoint, QLineF, QPointF
 from PySide6.QtGui import QPen, QPainter, QColor, QFont
 from PySide6.QtWidgets import QMainWindow, QGraphicsView
 
+from core.settings import config, DefaultSettings
 from core.utils import frange
 
 
@@ -15,20 +16,22 @@ class WindowUI:
 
 
 class VGEGraphicsView(QGraphicsView):
+    class GridStepRateData:
+        last_visible_range = None
+        last_steps: tuple[int, int] = None
+
     class GridStepRate(Enum):
         Binary = 2
         Decimal = 10
 
-        _last_visible_range = None
-        _last_steps: tuple[int, int] = None
-
         def get_steps(self, visible_range: int | float) -> tuple[int, int]:
             """Returns (big_step, small_step)"""
-            if visible_range == self._last_visible_range:
-                return self._last_steps
+            data = VGEGraphicsView.GridStepRateData
+            if visible_range == data.last_visible_range:
+                return data.last_steps
             steps = self._get_steps(visible_range, self)
-            self._last_visible_range = visible_range
-            self._last_steps = steps
+            data.last_visible_range = visible_range
+            data.last_steps = steps
             return steps
 
         @classmethod
@@ -59,6 +62,10 @@ class VGEGraphicsView(QGraphicsView):
             small_step = big_step // step_divider
             return big_step, small_step
 
+        @staticmethod
+        def get_last_steps():
+            return VGEGraphicsView.GridStepRateData.last_steps
+
     class Colors:
         Background: QColor = QColor(230, 230, 230)
         SceneRect: QColor = Qt.white
@@ -71,17 +78,25 @@ class VGEGraphicsView(QGraphicsView):
         self.drag_button = Qt.RightButton
 
         self.grid_step_rate: VGEGraphicsView.GridStepRate = (
-            VGEGraphicsView.GridStepRate.Binary
+            getattr(VGEGraphicsView.GridStepRate, config.value(
+                "grid_step_rate", DefaultSettings.GRID_STEP_RATE)
+                    )
         )
-        self.draw_grid: bool = False
+        self.draw_grid: bool = config.value(
+            "draw_grid", DefaultSettings.DRAW_GRID
+        )
 
         self.ruler_width: int = 18
-        self.draw_ruler: bool = False
+        self.draw_ruler: bool = config.value(
+            "draw_ruler", DefaultSettings.DRAW_RULER
+        )
 
         self.setMouseTracking(True)
         self._drag_start_pos = None
         self.cursor_pos = None
-        self.fit_cursor_into_grid: bool = True
+        self.fit_cursor_into_grid: bool = config.value(
+            "fit_cursor_into_grid", DefaultSettings.FIT_CURSOR_INTO_GRID
+        )
 
     def _draw_grid(self, painter):
         viewport_rect = self.viewport().rect()
@@ -113,35 +128,34 @@ class VGEGraphicsView(QGraphicsView):
             for y in range(int(range_start.y()), int(range_end.y()), small_step)
         ])
 
-        if scale > 6:
-            return
+        if scale <= 6:
+            pen.setWidth(
+                1 if scale > 3
+                else 2 if scale > 1
+                else 3 // scale
+            )
+            painter.setPen(pen)
+            painter.drawLines([
+                QLine(x, int(top_left.y()), x, int(bottom_right.y()) + 1)
+                for x in range(int(range_start.x()), int(range_end.x()), big_step)
+            ]+[
+                QLine(int(top_left.x()), y, int(bottom_right.x()) + 1, y)
+                for y in range(int(range_start.y()), int(range_end.y()), big_step)
+            ])
 
-        pen.setWidth(
-            1 if scale > 3
-            else 2 if scale > 1
-            else 3 // scale
-        )
-        painter.setPen(pen)
-        painter.drawLines([
-            QLine(x, int(top_left.y()), x, int(bottom_right.y()) + 1)
-            for x in range(int(range_start.x()), int(range_end.x()), big_step)
-        ]+[
-            QLine(int(top_left.x()), y, int(bottom_right.x()) + 1, y)
-            for y in range(int(range_start.y()), int(range_end.y()), big_step)
-        ])
+        if self.cursor_pos:
+            painter = QPainter(self.viewport())
+            pen = QPen(self.Colors.Cursor)
+            pen.setWidth(0.1)
+            painter.setPen(pen)
 
-        painter = QPainter(self.viewport())
-        pen = QPen(self.Colors.Cursor)
-        pen.setWidth(0.1)
-        painter.setPen(pen)
-
-        cursor_pos = self.cursor_pos
-        painter.drawLines([
-            QLineF(cursor_pos.x() - 5, cursor_pos.y(),
-                   cursor_pos.x() + 5, cursor_pos.y()),
-            QLineF(cursor_pos.x(), cursor_pos.y() - 5,
-                   cursor_pos.x(), cursor_pos.y() + 5)
-        ])
+            cursor_pos = self.cursor_pos
+            painter.drawLines([
+                QLineF(cursor_pos.x() - 5, cursor_pos.y(),
+                       cursor_pos.x() + 5, cursor_pos.y()),
+                QLineF(cursor_pos.x(), cursor_pos.y() - 5,
+                       cursor_pos.x(), cursor_pos.y() + 5)
+            ])
 
     def _draw_ruler(self):
         viewport_rect = self.viewport().rect()
@@ -210,16 +224,17 @@ class VGEGraphicsView(QGraphicsView):
             ]
         )
 
-        cursor_pen = QPen(self.Colors.Cursor)
-        cursor_pen.setWidth(0.1)
-        painter.setPen(cursor_pen)
-        painter.drawLines([
-            QLineF(self.ruler_width / 2, self.cursor_pos.y(),
-                   self.ruler_width, self.cursor_pos.y()),
-            QLineF(self.cursor_pos.x(), self.ruler_width / 2,
-                   self.cursor_pos.x(), self.ruler_width)
-        ])
-        painter.setPen(pen)
+        if self.cursor_pos:
+            cursor_pen = QPen(self.Colors.Cursor)
+            cursor_pen.setWidth(2)
+            painter.setPen(cursor_pen)
+            painter.drawLines([
+                QLineF(self.ruler_width / 2, self.cursor_pos.y(),
+                       self.ruler_width, self.cursor_pos.y()),
+                QLineF(self.cursor_pos.x(), self.ruler_width / 2,
+                       self.cursor_pos.x(), self.ruler_width)
+            ])
+            painter.setPen(pen)
 
         painter.setFont(QFont("Arial", self.ruler_width // 2))
         for x, scene_x in zip(
@@ -298,9 +313,27 @@ class VGEGraphicsView(QGraphicsView):
             self._drag_start_pos = event.pos()
         else:
             super().mouseMoveEvent(event)
-        if self.draw_ruler or self.draw_grid or not self.cursor_pos:
+
+        if self.cursor_pos:
+            if self.draw_ruler or self.draw_grid:
+                self.cursor_pos = event.pos()
+                last_steps = self.GridStepRate.get_last_steps()
+                if self.draw_grid and self.fit_cursor_into_grid and last_steps:
+                    scene_cords = self.mapToScene(event.pos())
+                    _, small_step = last_steps
+                    self.cursor_pos = self.mapFromScene(
+                        (
+                                (scene_cords.x() + small_step/2)
+                                // small_step * small_step
+                        ),
+                        (
+                                (scene_cords.y() + small_step/2)
+                                // small_step * small_step
+                        )
+                    )
+                self.viewport().update()
+        else:
             self.cursor_pos = event.pos()
-            self.viewport().update()
 
     def wheelEvent(self, event):
         if event.angleDelta().y() > 0:
