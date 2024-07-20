@@ -7,7 +7,6 @@ config = QSettings("config.ini", QSettings.Format.IniFormat)
 
 
 LOCALIZATION_DIR = BASE_DIR / "localizations"
-DEFAULT_LANGUAGE = "en_US"
 
 
 class DefaultSettings:
@@ -18,3 +17,11 @@ class DefaultSettings:
     FIT_CURSOR_INTO_GRID = True
 
     DRAW_RULER = True
+
+
+ASSETS_DIR = BASE_DIR / "assets"
+
+
+class Assets:
+    SELECTION_TOOl_ICON = str(ASSETS_DIR / "cursor.png")
+    GEOMETRY_TOOL_ICON = str(ASSETS_DIR / "line.png")

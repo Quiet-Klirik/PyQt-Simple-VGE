@@ -1,8 +1,9 @@
+from abc import ABC
 from enum import Enum
 from math import log2, log10
 
 from PySide6.QtCore import Qt, QLine, QPoint, QLineF, QPointF
-from PySide6.QtGui import QPen, QPainter, QColor, QFont
+from PySide6.QtGui import QPen, QPainter, QColor, QFont, QMouseEvent
 from PySide6.QtWidgets import QMainWindow, QGraphicsView
 
 from core.settings import config, DefaultSettings
@@ -13,6 +14,23 @@ class WindowUI:
     def __init__(self, window: QMainWindow):
         self.window = window
         self.tr = self.window.tr
+
+
+class VGEGraphicsTool(ABC):
+    def __init__(self):
+        self.view: VGEGraphicsView | None = None
+
+    def setParentView(self, view):
+        self.view = view
+
+    def mousePressEvent(self, event: QMouseEvent):
+        pass
+
+    def mouseMoveEvent(self, event: QMouseEvent):
+        pass
+
+    def mouseReleaseEvent(self, event: QMouseEvent):
+        pass
 
 
 class VGEGraphicsView(QGraphicsView):
@@ -98,6 +116,8 @@ class VGEGraphicsView(QGraphicsView):
             "fit_cursor_into_grid", DefaultSettings.FIT_CURSOR_INTO_GRID
         )
 
+        self.active_graphic_tool: VGEGraphicsTool = VGEGraphicsTool()
+
     def _draw_grid(self, painter):
         viewport_rect = self.viewport().rect()
 
@@ -109,6 +129,9 @@ class VGEGraphicsView(QGraphicsView):
         )
 
         big_step, small_step = self.grid_step_rate.get_steps(visible_range)
+
+        if big_step > 10**8:
+            return
 
         pen = QPen(self.Colors.Grid)
         pen.setWidth(0.1)
@@ -196,6 +219,9 @@ class VGEGraphicsView(QGraphicsView):
             scene_bottom_right.y() - scene_top_left.y()
         )
         big_step, small_step = self.grid_step_rate.get_steps(visible_range)
+
+        if big_step > 10**8:
+            return
 
         scene_range_start = (
             (scene_top_left / big_step).toPoint() + QPoint(-1, -1)
@@ -292,14 +318,22 @@ class VGEGraphicsView(QGraphicsView):
     def setDragButton(self, button: Qt.MouseButton):
         self.drag_button = button
 
-    def mousePressEvent(self, event):
+    def setActiveGraphicTool(self, tool: VGEGraphicsTool):
+        if self.active_graphic_tool:
+            self.active_graphic_tool.setParentView(None)
+        self.active_graphic_tool = tool
+        tool.setParentView(self)
+
+    def mousePressEvent(self, event: QMouseEvent):
         if (
                 self.dragMode() == self.DragMode.RubberBandDrag
                 and event.button() == self.drag_button
         ):
             self._drag_start_pos = event.pos()
 
-    def mouseMoveEvent(self, event):
+        self.active_graphic_tool.mousePressEvent(event)
+
+    def mouseMoveEvent(self, event: QMouseEvent):
         if event.buttons() & self.drag_button:
             delta = event.pos() - self._drag_start_pos
             horizontal_scrollbar = self.horizontalScrollBar()
@@ -334,6 +368,11 @@ class VGEGraphicsView(QGraphicsView):
                 self.viewport().update()
         else:
             self.cursor_pos = event.pos()
+
+        self.active_graphic_tool.mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        self.active_graphic_tool.mouseReleaseEvent(event)
 
     def wheelEvent(self, event):
         if event.angleDelta().y() > 0:

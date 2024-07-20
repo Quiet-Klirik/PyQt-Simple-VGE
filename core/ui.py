@@ -1,5 +1,5 @@
-from PySide6.QtCore import Qt, QRect
-from PySide6.QtGui import QAction
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QAction, QIcon
 from PySide6.QtWidgets import (
     QMainWindow,
     QToolBar,
@@ -9,12 +9,16 @@ from PySide6.QtWidgets import (
     QStatusBar,
     QWidget,
     QHBoxLayout,
-    QSizePolicy, QGraphicsScene,
+    QSizePolicy,
+    QGraphicsScene,
+    QToolButton,
+    QButtonGroup,
 )
 
 from core import generics
 from core.generics import VGEGraphicsView
-from core.settings import config, DefaultSettings
+from core.graphics_tools import SelectionTool, GeometryTool
+from core.settings import config, DefaultSettings, Assets
 
 
 class RootWindow(generics.WindowUI):
@@ -50,6 +54,41 @@ class RootWindow(generics.WindowUI):
         # Instruments Panel
         self.toolbar = QToolBar()
         self.window.addToolBar(self.toolbar)
+
+        self.toolbar__container = QWidget()
+        self.toolbar__layout_v = QVBoxLayout()
+
+        self.toolbar__selection_tool_button = QToolButton()
+        self.toolbar__selection_tool_button_action = QAction(
+            QIcon(Assets.SELECTION_TOOl_ICON), "Selection tool", self.window
+        )
+        self.toolbar__selection_tool_button_action.setCheckable(True)
+        self.toolbar__selection_tool_instance = SelectionTool()
+
+        self.toolbar__selection_tool_button.setDefaultAction(
+            self.toolbar__selection_tool_button_action
+        )
+
+        self.toolbar__geometry_tool_button = QToolButton()
+        self.toolbar__geometry_tool_button_action = QAction(
+            QIcon(Assets.GEOMETRY_TOOL_ICON), "Geometry tool", self.window
+        )
+        self.toolbar__geometry_tool_button_action.setCheckable(True)
+        self.toolbar__geometry_tool_instance = GeometryTool()
+
+        self.toolbar__geometry_tool_button.setDefaultAction(
+            self.toolbar__geometry_tool_button_action
+        )
+
+        self.toolbar__button_group = QButtonGroup(self.window)
+        self.toolbar__button_group.setExclusive(True)
+        self.toolbar__button_group.addButton(self.toolbar__selection_tool_button)
+        self.toolbar__button_group.addButton(self.toolbar__geometry_tool_button)
+
+        self.toolbar__layout_v.addWidget(self.toolbar__selection_tool_button)
+        self.toolbar__layout_v.addWidget(self.toolbar__geometry_tool_button)
+        self.toolbar__container.setLayout(self.toolbar__layout_v)
+        self.toolbar.addWidget(self.toolbar__container)
 
         # Work area
         self.work_area = VGEGraphicsView(self.window)
@@ -91,8 +130,10 @@ class RootWindow(generics.WindowUI):
 
     def setup_styles(self):
         self.toolbar.setObjectName("toolbar")
+        self.toolbar__selection_tool_button.setObjectName("toolbar-item")
+        self.toolbar__geometry_tool_button.setObjectName("toolbar-item")
         self.work_area.setObjectName("work-area")
-        self.properties_panel.setObjectName("properties_panel")
+        self.properties_panel.setObjectName("properties-panel")
         self.statusbar.setObjectName("statusbar")
 
         self.window.setStyleSheet("""
@@ -100,12 +141,27 @@ class RootWindow(generics.WindowUI):
                 background-color: lightgray;
                 border-right: 0.5px solid gray
             }
+            
+            #toolbar-item {
+                padding: 5px;
+                background-color: #f0f0f0;
+                border: 1px solid #bbb;
+            }
+            
+            #toolbar-item:hover {
+                background-color: #eaeaea;
+            }
+            
+            #toolbar-item:checked {
+                background-color: #e0e0e0;
+                border-color: #888;
+            }
 
             #work-area {
                 border: none;
             }
 
-            #properties_panel {
+            #properties-panel {
                 background-color: lightgray;
                 border-left: 0.5px solid gray
             }
@@ -114,6 +170,13 @@ class RootWindow(generics.WindowUI):
                 border-top: 0.5px solid gray;
             }
         """)
+
+        self.toolbar__selection_tool_button.setToolButtonStyle(
+            Qt.ToolButtonStyle.ToolButtonIconOnly
+        )
+        self.toolbar__layout_v.setAlignment(
+            Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter
+        )
 
         self.work_area.setAlignment(Qt.AlignCenter)
 

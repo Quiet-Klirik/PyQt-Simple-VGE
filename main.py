@@ -12,12 +12,22 @@ class RootWindow(QMainWindow):
         self.UI = ui.RootWindow(self)
         self.setup_connections()
 
+        self.UI.toolbar__selection_tool_button_action.trigger()
+
     def setup_connections(self):
         self.UI.menubar__view_menu__grid_action.changed.connect(
             self.toggle_grid_display
         )
         self.UI.menubar__view_menu__ruler_action.changed.connect(
             self.toggle_ruler_display
+        )
+
+        self.UI.toolbar__selection_tool_button_action.changed.connect(
+            self.selection_tool_chosen
+        )
+
+        self.UI.toolbar__selection_tool_button_action.changed.connect(
+            self.geometry_tool_chosen
         )
 
     @Slot()
@@ -30,6 +40,22 @@ class RootWindow(QMainWindow):
     def toggle_ruler_display(self):
         self.UI.work_area.draw_ruler = (
             self.UI.menubar__view_menu__ruler_action.isChecked()
+        )
+
+    @Slot()
+    def selection_tool_chosen(self):
+        if not self.UI.toolbar__selection_tool_button_action.isChecked():
+            return
+        self.UI.work_area.setActiveGraphicTool(
+            self.UI.toolbar__selection_tool_instance
+        )
+
+    @Slot()
+    def geometry_tool_chosen(self):
+        if not self.UI.toolbar__geometry_tool_button_action.isChecked():
+            return
+        self.UI.work_area.setActiveGraphicTool(
+            self.UI.toolbar__geometry_tool_instance
         )
 
 
