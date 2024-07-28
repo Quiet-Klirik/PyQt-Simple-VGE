@@ -23,11 +23,24 @@ class RootWindow(QMainWindow):
         )
 
         self.UI.toolbar__selection_tool_button_action.changed.connect(
-            self.selection_tool_chosen
+            self.tool_chosen
         )
 
-        self.UI.toolbar__selection_tool_button_action.changed.connect(
-            self.geometry_tool_chosen
+        self.UI.toolbar__geometry_tool_button_action.changed.connect(
+            self.tool_chosen
+        )
+
+        self.UI.toolbar__geometry_tool_menu__line_action.changed.connect(
+            self.geometry_tool_change_geometry
+        )
+        self.UI.toolbar__geometry_tool_menu__rectangle_action.changed.connect(
+            self.geometry_tool_change_geometry
+        )
+        self.UI.toolbar__geometry_tool_menu__polygon_action.changed.connect(
+            self.geometry_tool_change_geometry
+        )
+        self.UI.toolbar__geometry_tool_menu__ellipse_action.changed.connect(
+            self.geometry_tool_change_geometry
         )
 
     @Slot()
@@ -43,20 +56,25 @@ class RootWindow(QMainWindow):
         )
 
     @Slot()
-    def selection_tool_chosen(self):
-        if not self.UI.toolbar__selection_tool_button_action.isChecked():
+    def tool_chosen(self):
+        tool_action = self.sender()
+        if not tool_action.isChecked():
             return
         self.UI.work_area.setActiveGraphicTool(
-            self.UI.toolbar__selection_tool_instance
+            self.UI.toolbar__tool_instances[tool_action.text()]
         )
 
     @Slot()
-    def geometry_tool_chosen(self):
-        if not self.UI.toolbar__geometry_tool_button_action.isChecked():
+    def geometry_tool_change_geometry(self):
+        action = self.sender()
+        if not action.isChecked():
             return
-        self.UI.work_area.setActiveGraphicTool(
-            self.UI.toolbar__geometry_tool_instance
+        if not self.UI.toolbar__geometry_tool_button_action.isChecked():
+            self.UI.toolbar__geometry_tool_button_action.setChecked(True)
+        self.UI.toolbar__tool_instances["Geometry tool"].set_geometry_type(
+            action.text()
         )
+        self.UI.toolbar__geometry_tool_button_action.setIcon(action.icon())
 
 
 if __name__ == "__main__":

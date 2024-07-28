@@ -1,5 +1,5 @@
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction, QIcon
+from PySide6.QtGui import QAction, QIcon, QActionGroup
 from PySide6.QtWidgets import (
     QMainWindow,
     QToolBar,
@@ -13,11 +13,12 @@ from PySide6.QtWidgets import (
     QGraphicsScene,
     QToolButton,
     QButtonGroup,
+    QMenu,
 )
 
 from core import generics
 from core.generics import VGEGraphicsView
-from core.graphics_tools import SelectionTool, GeometryTool
+from core.graphics.graphics_tools import SelectionTool, GeometryTool
 from core.settings import config, DefaultSettings, Assets
 
 
@@ -63,7 +64,6 @@ class RootWindow(generics.WindowUI):
             QIcon(Assets.SELECTION_TOOl_ICON), "Selection tool", self.window
         )
         self.toolbar__selection_tool_button_action.setCheckable(True)
-        self.toolbar__selection_tool_instance = SelectionTool()
 
         self.toolbar__selection_tool_button.setDefaultAction(
             self.toolbar__selection_tool_button_action
@@ -71,19 +71,72 @@ class RootWindow(generics.WindowUI):
 
         self.toolbar__geometry_tool_button = QToolButton()
         self.toolbar__geometry_tool_button_action = QAction(
-            QIcon(Assets.GEOMETRY_TOOL_ICON), "Geometry tool", self.window
+            QIcon(Assets.GEOMETRY_TOOL_LINE_ICON), "Geometry tool", self.window
         )
         self.toolbar__geometry_tool_button_action.setCheckable(True)
-        self.toolbar__geometry_tool_instance = GeometryTool()
 
         self.toolbar__geometry_tool_button.setDefaultAction(
             self.toolbar__geometry_tool_button_action
+        )
+
+        self.toolbar__geometry_tool_menu = QMenu()
+
+        self.toolbar__geometry_tool_menu__line_action = QAction(
+            QIcon(Assets.GEOMETRY_TOOL_LINE_ICON), "Line", self.window
+        )
+        self.toolbar__geometry_tool_menu__line_action.setCheckable(True)
+        self.toolbar__geometry_tool_menu__line_action.setChecked(True)
+        self.toolbar__geometry_tool_menu__rectangle_action = QAction(
+            QIcon(Assets.GEOMETRY_TOOL_RECTANGLE_ICON), "Rectangle", self.window
+        )
+        self.toolbar__geometry_tool_menu__rectangle_action.setCheckable(True)
+        self.toolbar__geometry_tool_menu__polygon_action = QAction(
+            QIcon(Assets.GEOMETRY_TOOL_POLYGON_ICON), "Polygon", self.window
+        )
+        self.toolbar__geometry_tool_menu__polygon_action.setCheckable(True)
+        self.toolbar__geometry_tool_menu__ellipse_action = QAction(
+            QIcon(Assets.GEOMETRY_TOOL_ELLIPSE_ICON), "Ellipse", self.window
+        )
+        self.toolbar__geometry_tool_menu__ellipse_action.setCheckable(True)
+
+        self.toolbar__geometry_tool_menu.addActions([
+            self.toolbar__geometry_tool_menu__line_action,
+            self.toolbar__geometry_tool_menu__rectangle_action,
+            self.toolbar__geometry_tool_menu__polygon_action,
+            self.toolbar__geometry_tool_menu__ellipse_action,
+        ])
+
+        self.toolbar__geometry_tool__action_group = QActionGroup(self.window)
+        self.toolbar__geometry_tool__action_group.setExclusive(True)
+        self.toolbar__geometry_tool__action_group.addAction(
+            self.toolbar__geometry_tool_menu__line_action
+        )
+        self.toolbar__geometry_tool__action_group.addAction(
+            self.toolbar__geometry_tool_menu__rectangle_action
+        )
+        self.toolbar__geometry_tool__action_group.addAction(
+            self.toolbar__geometry_tool_menu__polygon_action
+        )
+        self.toolbar__geometry_tool__action_group.addAction(
+            self.toolbar__geometry_tool_menu__ellipse_action
+        )
+
+        self.toolbar__geometry_tool_button.setMenu(
+            self.toolbar__geometry_tool_menu
+        )
+        self.toolbar__geometry_tool_button.setPopupMode(
+            QToolButton.MenuButtonPopup
         )
 
         self.toolbar__button_group = QButtonGroup(self.window)
         self.toolbar__button_group.setExclusive(True)
         self.toolbar__button_group.addButton(self.toolbar__selection_tool_button)
         self.toolbar__button_group.addButton(self.toolbar__geometry_tool_button)
+
+        self.toolbar__tool_instances = {
+            "Selection tool": SelectionTool(),
+            "Geometry tool": GeometryTool(),
+        }
 
         self.toolbar__layout_v.addWidget(self.toolbar__selection_tool_button)
         self.toolbar__layout_v.addWidget(self.toolbar__geometry_tool_button)
@@ -155,6 +208,17 @@ class RootWindow(generics.WindowUI):
             #toolbar-item:checked {
                 background-color: #e0e0e0;
                 border-color: #888;
+            }
+
+            #toolbar-item::menu-button {
+                height: 12%;
+                width: 12%;
+                subcontrol-position: bottom right;
+                border: none;
+            }
+
+            #toolbar-item::menu-arrow {
+                image: url("./assets/dropdown.png");
             }
 
             #work-area {
